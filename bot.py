@@ -3,6 +3,7 @@ import os
 import logging
 from flask import Flask
 from threading import Thread
+from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
@@ -13,40 +14,44 @@ API_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ---------------- FLASK (FOR RENDER PORT FIX) ----------------
+# ---------------- FLASK (Render fix) ----------------
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Bot is running 🚀"
+    return "JET X BOT is LIVE 🚀"
 
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
 
 # ---------------- BATCHES ----------------
 BATCHES = {
-    "neet_2025": {
-        "name": "🎓 NEET 2025 Dropper Batch",
-        "price": 110,
-        "desc": "HD Lectures + Tests + Notes",
+    "neet": {
+        "name": "🎓 NEET 2025 Dropper / NEET Batch",
+        "price": 199,
+        "desc": """✅ HD Lectures Available
+✅ Weekly Mock Test
+✅ Handwritten Notes
+✅ Class Notes Included""",
         "channel_id": -1002703950742
     },
-    "physics_5.0": {
+    "physics": {
         "name": "🎓 PHYSICS 5.0",
-        "price": 110,
-        "desc": "167 Lectures Full Course",
+        "price": 199,
+        "desc": "📚 167 Lectures Available (HD Quality)",
         "channel_id": -1002648606297
     },
-    "fire_physics": {
-        "name": "🔥 Fire Physics",
-        "price": 110,
-        "desc": "Advanced Physics",
+    "fire": {
+        "name": "🔥 Fire Physics 4.0",
+        "price": 199,
+        "desc": "✅ HD Lectures Available",
         "channel_id": -1002492489194
     },
-    "std_12_pcb": {
-        "name": "🎓 STD 12 PCB",
-        "price": 110,
-        "desc": "Full Board Course",
+    "pcb": {
+        "name": "🎓 STD 12 PCB BOARD",
+        "price": 200,
+        "desc": """📦 FULL BATCH DOWNLOAD
+📚 417 Lectures Available""",
         "channel_id": -1003053248183
     }
 }
@@ -54,8 +59,16 @@ BATCHES = {
 # ---------------- START ----------------
 @dp.message(Command("start"))
 async def start(msg: types.Message):
-    kb = [[InlineKeyboardButton(text=v["name"], callback_data=f"info_{k})] for k, v in BATCHES.items()]
-    await msg.answer("🚀 Select Batch:", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
+    kb = [
+        [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
+        for k, v in BATCHES.items()
+    ]
+
+    await msg.answer(
+        "👋 *Welcome to JET X BOT*\n\nSelect your batch:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=kb),
+        parse_mode="Markdown"
+    )
 
 # ---------------- INFO ----------------
 @dp.callback_query(F.data.startswith("info_"))
@@ -64,10 +77,28 @@ async def info(cb: types.CallbackQuery):
     data = BATCHES[key]
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Buy", callback_data=f"buy_{key}")]
+        [InlineKeyboardButton(text="💳 Buy Now", callback_data=f"buy_{key}")],
+        [InlineKeyboardButton(text="⬅️ Back", callback_data="back")]
     ])
 
-    await cb.message.edit_text(f"{data['name']}\n\n{data['desc']}", reply_markup=kb)
+    await cb.message.edit_text(
+        f"🔥 *{data['name']}*\n\n{data['desc']}\n\n💰 *Price:* ₹{data['price']}",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+# ---------------- BACK ----------------
+@dp.callback_query(F.data == "back")
+async def back(cb: types.CallbackQuery):
+    kb = [
+        [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
+        for k, v in BATCHES.items()
+    ]
+
+    await cb.message.edit_text(
+        "📚 Choose your batch:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=kb)
+    )
 
 # ---------------- BUY ----------------
 @dp.callback_query(F.data.startswith("buy_"))
@@ -80,15 +111,34 @@ async def buy(cb: types.CallbackQuery):
         title=data["name"],
         description=data["desc"],
         payload=f"pay_{key}",
-        provider_token="",
+        provider_token="",  # Telegram Stars ke liye empty hi rahega
         currency="XTR",
         prices=[LabeledPrice(label="Stars", amount=data["price"])]
     )
 
-# ---------------- PAYMENT ----------------
+# ---------------- PAYMENT SUCCESS ----------------
 @dp.message(F.successful_payment)
 async def paid(msg: types.Message):
-    await msg.answer("✅ Payment Success!")
+    payload = msg.successful_payment.invoice_payload
+    key = payload.split("_")[1]
+
+    data = BATCHES[key]
+
+    # 5 minute expire + 1 user only
+    expire_time = int((datetime.now() + timedelta(minutes=5)).timestamp())
+
+    link = await bot.create_chat_invite_link(
+        chat_id=data["channel_id"],
+        member_limit=1,
+        expire_date=expire_time
+    )
+
+    await msg.answer(
+        f"✅ *Payment Successful!*\n\n"
+        f"🔗 Join your batch:\n{link.invite_link}\n\n"
+        f"⚠️ Link 5 min me expire ho jayega",
+        parse_mode="Markdown"
+    )
 
 # ---------------- MAIN ----------------
 async def main():
