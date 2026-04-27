@@ -42,7 +42,7 @@ BATCHES = {
         "channel_id": -1002648606297
     },
     "fire": {
-        "name": "🔥 Fire Physics 4.0",
+        "name": "🔥 Physics 4.0",
         "price": 100,
         "desc": "✅ HD Lectures Available",
         "channel_id": -1002492489194
