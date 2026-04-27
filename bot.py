@@ -10,49 +10,53 @@ from aiogram.filters import Command
 
 # ---------------- CONFIG ----------------
 API_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_PATH = "/webhook"
-BASE_URL = os.getenv("RENDER_EXTERNAL_URL")  # Render auto provides
-WEBHOOK_URL = f"{BASE_URL}{WEBHOOK_PATH}"
+BASE_URL = os.getenv("RENDER_EXTERNAL_URL")
+WEBHOOK_URL = f"{BASE_URL}/webhook"
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ---------------- FLASK SERVER ----------------
+# ---------------- FLASK ----------------
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "JET X BOT is Online!"
+    return "JET X BOT is LIVE 🚀"
 
-# Telegram webhook endpoint
-@app.route(WEBHOOK_PATH, methods=["POST"])
-async def telegram_webhook():
-    update = types.Update(**request.json)
-    await dp.feed_update(bot, update)
-    return "OK"
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    try:
+        data = request.get_json(force=True)
+        update = types.Update(**data)
 
-def run_web():
+        asyncio.run(dp.feed_update(bot, update))
+        return "OK"
+    except Exception as e:
+        print("WEBHOOK ERROR:", e)
+        return "ERROR", 500
+
+def run_flask():
     app.run(host="0.0.0.0", port=8080)
 
-# ---------------- DATABASE ----------------
+# ---------------- BATCHES ----------------
 BATCHES = {
     "neet_2025": {
-        "name": "🎓 NEET 2025 Dropper Batch",
+        "name": "🎓 NEET 2025 Batch",
         "price": 110,
-        "desc": "HD Lectures + Mock Tests",
+        "desc": "HD Lectures + Notes",
         "channel_id": -1002703950742
     },
-    "physics_5.0": {
-        "name": "🎓 PHYSICS 5.0",
+    "physics_5": {
+        "name": "🎓 Physics 5.0",
         "price": 110,
-        "desc": "167 HD Lectures",
+        "desc": "Complete Physics Course",
         "channel_id": -1002648606297
     }
 }
 
 # ---------------- START ----------------
 @dp.message(Command("start"))
-async def cmd_start(message: types.Message):
+async def start(message: types.Message):
     buttons = [
         [InlineKeyboardButton(text=i["name"], callback_data=f"info_{k}")]
         for k, i in BATCHES.items()
@@ -65,11 +69,11 @@ async def cmd_start(message: types.Message):
 
 # ---------------- INFO ----------------
 @dp.callback_query(F.data.startswith("info_"))
-async def show_details(callback: types.CallbackQuery):
+async def info(callback: types.CallbackQuery):
     b_id = callback.data.split("_", 1)[1]
-    info = BATCHES[b_id]
+    data = BATCHES[b_id]
 
-    text = f"🔥 {info['name']}\n\n{info['desc']}\n\n💰 Price: ₹{info['price']}"
+    text = f"🔥 {data['name']}\n\n{data['desc']}\n\n💰 Price: ₹{data['price']}"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Buy Now", callback_data=f"buy_{b_id}")],
@@ -87,24 +91,24 @@ async def back(callback: types.CallbackQuery):
     ]
 
     await callback.message.edit_text(
-        "👋 Choose batch:",
+        "👋 Choose Batch:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
     )
 
-# ---------------- PAYMENT ----------------
+# ---------------- BUY ----------------
 @dp.callback_query(F.data.startswith("buy_"))
 async def buy(callback: types.CallbackQuery):
     b_id = callback.data.split("_", 1)[1]
-    info = BATCHES[b_id]
+    data = BATCHES[b_id]
 
     await bot.send_invoice(
         chat_id=callback.from_user.id,
-        title=info["name"],
-        description=info["desc"],
+        title=data["name"],
+        description=data["desc"],
         payload=f"pay_{b_id}",
         provider_token="",
         currency="XTR",
-        prices=[LabeledPrice(label="Stars", amount=info["price"])]
+        prices=[LabeledPrice(label="Stars", amount=data["price"])]
     )
 
 # ---------------- PAYMENT SUCCESS ----------------
@@ -120,9 +124,7 @@ async def success(message: types.Message):
         member_limit=1
     )
 
-    await message.answer(
-        f"✅ Payment Done!\nJoin: {invite.invite_link}"
-    )
+    await message.answer(f"✅ Paid!\nJoin here: {invite.invite_link}")
 
 # ---------------- STARTUP ----------------
 async def on_start():
@@ -130,7 +132,7 @@ async def on_start():
     await bot.set_webhook(WEBHOOK_URL)
 
 async def main():
-    Thread(target=run_web).start()
+    Thread(target=run_flask).start()
     await on_start()
 
 if __name__ == "__main__":
