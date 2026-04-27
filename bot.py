@@ -14,7 +14,7 @@ API_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ---------------- FLASK (Render fix) ----------------
+# ---------------- FLASK ----------------
 app = Flask(__name__)
 
 @app.route("/")
@@ -24,11 +24,11 @@ def home():
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
 
-# ---------------- BATCHES (100 ⭐ pricing) ----------------
+# ---------------- BATCHES ----------------
 BATCHES = {
     "neet": {
         "name": "🎓 NEET 2025 Dropper / NEET Batch",
-        "price": 100,  # ⭐
+        "price": 100,
         "desc": """✅ HD Lectures Available
 ✅ Weekly Mock Test
 ✅ Handwritten Notes
@@ -66,8 +66,7 @@ async def start(msg: types.Message):
 
     await msg.answer(
         "👋 *Welcome to JET X BOT*\n\n"
-        "💰 Price: 100 ⭐ (≈ ₹200)\n\n"
-        "💡 Tip: Profile se ₹200 me 100 ⭐ buy karein\n\n"
+        "💰 Fixed Price: 100 ⭐\n\n"
         "📚 Select your batch:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=kb),
         parse_mode="Markdown"
@@ -80,16 +79,49 @@ async def info(cb: types.CallbackQuery):
     data = BATCHES[key]
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Buy Now", callback_data=f"buy_{key}")],
+        [InlineKeyboardButton(text="💳 Buy Now (100 ⭐)", callback_data=f"buy_{key}")],
+        [InlineKeyboardButton(text="💰 Custom Payment", callback_data="custom_pay")],
         [InlineKeyboardButton(text="⬅️ Back", callback_data="back")]
     ])
 
     await cb.message.edit_text(
         f"🔥 *{data['name']}*\n\n"
         f"{data['desc']}\n\n"
-        f"💰 *Price:* {data['price']} ⭐ (≈ ₹200)",
+        f"💰 Price: {data['price']} ⭐",
         reply_markup=kb,
         parse_mode="Markdown"
+    )
+
+# ---------------- CUSTOM PAYMENT MENU ----------------
+@dp.callback_query(F.data == "custom_pay")
+async def custom_pay(cb: types.CallbackQuery):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="25 ⭐", callback_data="pay_25")],
+        [InlineKeyboardButton(text="50 ⭐", callback_data="pay_50")],
+        [InlineKeyboardButton(text="75 ⭐", callback_data="pay_75")],
+        [InlineKeyboardButton(text="100 ⭐", callback_data="pay_100")],
+        [InlineKeyboardButton(text="⬅️ Back", callback_data="back")]
+    ])
+
+    await cb.message.edit_text(
+        "💰 *Custom Payment Choose karo:*",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+# ---------------- PAYMENT (CUSTOM + BATCH) ----------------
+@dp.callback_query(F.data.startswith("pay_"))
+async def pay(cb: types.CallbackQuery):
+    stars = int(cb.data.split("_")[1])
+
+    await bot.send_invoice(
+        chat_id=cb.from_user.id,
+        title="JET X PAYMENT",
+        description="Course Access",
+        payload=f"custom_{stars}",
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label="Stars", amount=stars)]
     )
 
 # ---------------- BACK ----------------
@@ -116,7 +148,7 @@ async def buy(cb: types.CallbackQuery):
         title=data["name"],
         description=data["desc"],
         payload=f"pay_{key}",
-        provider_token="",  # Stars ke liye empty
+        provider_token="",
         currency="XTR",
         prices=[LabeledPrice(label="Stars", amount=data["price"])]
     )
@@ -125,8 +157,13 @@ async def buy(cb: types.CallbackQuery):
 @dp.message(F.successful_payment)
 async def paid(msg: types.Message):
     payload = msg.successful_payment.invoice_payload
-    key = payload.split("_")[1]
 
+    # CUSTOM PAYMENT
+    if "custom_" in payload:
+        await msg.answer("✅ Custom Payment Successful 🎉")
+        return
+
+    key = payload.split("_")[1]
     data = BATCHES[key]
 
     expire_time = int((datetime.now() + timedelta(minutes=5)).timestamp())
@@ -138,8 +175,8 @@ async def paid(msg: types.Message):
     )
 
     await msg.answer(
-        f"✅ *Payment Successful!*\n\n"
-        f"🔗 Join your batch:\n{link.invite_link}\n\n"
+        f"✅ Payment Successful!\n\n"
+        f"🔗 Join Link:\n{link.invite_link}\n\n"
         f"⚠️ Link 5 min me expire ho jayega",
         parse_mode="Markdown"
     )
