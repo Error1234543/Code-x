@@ -1,145 +1,111 @@
 import asyncio
 import os
 import logging
-from flask import Flask, request
-from threading import Thread
 
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import LabeledPrice, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from aiogram.filters import Command
 
-# ---------------- CONFIG ----------------
 API_TOKEN = os.getenv("BOT_TOKEN")
-BASE_URL = os.getenv("RENDER_EXTERNAL_URL")
-WEBHOOK_URL = f"{BASE_URL}/webhook"
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ---------------- FLASK APP ----------------
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "JET X BOT IS LIVE 🚀"
-
-# ---------------- WEBHOOK ----------------
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    try:
-        data = request.get_json(force=True)
-
-        # AIogram v3 safe parse (IMPORTANT FIX)
-        update = types.Update.model_validate(data)
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(dp.feed_update(bot, update))
-
-        return "OK"
-    except Exception as e:
-        print("WEBHOOK ERROR:", e)
-        return "OK", 200  # Telegram ko 500 nahi dena
-
-def run_flask():
-    app.run(host="0.0.0.0", port=8080)
-
-# ---------------- BATCHES ----------------
+# ---------------- ALL BATCHES ----------------
 BATCHES = {
     "neet_2025": {
-        "name": "🎓 NEET 2025 Batch",
+        "name": "🎓 NEET 2025 Dropper Batch",
         "price": 110,
-        "desc": "HD Lectures + Notes",
+        "desc": "HD Lectures + Weekly Tests + Notes",
         "channel_id": -1002703950742
     },
-    "physics_5": {
-        "name": "🎓 Physics 5.0",
+    "physics_5.0": {
+        "name": "🎓 PHYSICS 5.0",
         "price": 110,
-        "desc": "Full Physics Course",
+        "desc": "167 HD Lectures + Full Physics Mastery",
         "channel_id": -1002648606297
+    },
+    "fire_physics": {
+        "name": "🔥 Fire Physics 4.0",
+        "price": 110,
+        "desc": "Advanced Physics Crash Course",
+        "channel_id": -1002492489194
+    },
+    "std_12_pcb": {
+        "name": "🎓 STD 12 PCB Board",
+        "price": 110,
+        "desc": "Full Board Course (417 Lectures)",
+        "channel_id": -1003053248183
     }
 }
 
 # ---------------- START ----------------
 @dp.message(Command("start"))
-async def start(message: types.Message):
-    buttons = [
+async def start(msg: types.Message):
+    kb = [
         [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
         for k, v in BATCHES.items()
     ]
 
-    await message.answer(
-        "👋 Welcome to JET X BOT",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    await msg.answer(
+        "🚀 Welcome to JET X BOT\nChoose your batch:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=kb)
     )
 
 # ---------------- INFO ----------------
 @dp.callback_query(F.data.startswith("info_"))
-async def info(callback: types.CallbackQuery):
-    b_id = callback.data.split("_", 1)[1]
-    data = BATCHES[b_id]
-
-    text = f"🔥 {data['name']}\n\n{data['desc']}\n\n💰 Price: ₹{data['price']}"
+async def info(cb: types.CallbackQuery):
+    key = cb.data.split("_")[1]
+    data = BATCHES[key]
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Buy Now", callback_data=f"buy_{b_id}")],
+        [InlineKeyboardButton(text="💳 Buy Now", callback_data=f"buy_{key}")],
         [InlineKeyboardButton(text="⬅️ Back", callback_data="back")]
     ])
 
-    await callback.message.edit_text(text, reply_markup=kb)
+    await cb.message.edit_text(
+        f"🔥 {data['name']}\n\n{data['desc']}\n\n💰 Price: ₹{data['price']}",
+        reply_markup=kb
+    )
 
 # ---------------- BACK ----------------
 @dp.callback_query(F.data == "back")
-async def back(callback: types.CallbackQuery):
-    buttons = [
+async def back(cb: types.CallbackQuery):
+    kb = [
         [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
         for k, v in BATCHES.items()
     ]
 
-    await callback.message.edit_text(
-        "👋 Choose Batch:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    await cb.message.edit_text(
+        "🚀 Choose Batch:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=kb)
     )
 
 # ---------------- BUY ----------------
 @dp.callback_query(F.data.startswith("buy_"))
-async def buy(callback: types.CallbackQuery):
-    b_id = callback.data.split("_", 1)[1]
-    data = BATCHES[b_id]
+async def buy(cb: types.CallbackQuery):
+    key = cb.data.split("_")[1]
+    data = BATCHES[key]
 
     await bot.send_invoice(
-        chat_id=callback.from_user.id,
+        chat_id=cb.from_user.id,
         title=data["name"],
         description=data["desc"],
-        payload=f"pay_{b_id}",
+        payload=f"pay_{key}",
         provider_token="",
         currency="XTR",
         prices=[LabeledPrice(label="Stars", amount=data["price"])]
     )
 
-# ---------------- PAYMENT SUCCESS ----------------
+# ---------------- PAYMENT ----------------
 @dp.message(F.successful_payment)
-async def success(message: types.Message):
-    payload = message.successful_payment.invoice_payload
-    b_id = payload.split("_", 1)[1]
+async def paid(msg: types.Message):
+    await msg.answer("✅ Payment Success! Access will be given soon.")
 
-    channel_id = BATCHES[b_id]["channel_id"]
-
-    invite = await bot.create_chat_invite_link(
-        chat_id=channel_id,
-        member_limit=1
-    )
-
-    await message.answer(f"✅ Payment Done!\nJoin: {invite.invite_link}")
-
-# ---------------- STARTUP ----------------
-async def on_start():
-    await bot.delete_webhook(drop_pending_updates=True)
-    await bot.set_webhook(WEBHOOK_URL)
-
+# ---------------- MAIN ----------------
 async def main():
-    Thread(target=run_flask).start()
-    await on_start()
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
