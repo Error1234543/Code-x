@@ -16,24 +16,30 @@ WEBHOOK_URL = f"{BASE_URL}/webhook"
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ---------------- FLASK ----------------
+# ---------------- FLASK APP ----------------
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "JET X BOT is LIVE 🚀"
+    return "JET X BOT IS LIVE 🚀"
 
+# ---------------- WEBHOOK ----------------
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
         data = request.get_json(force=True)
-        update = types.Update(**data)
 
-        asyncio.run(dp.feed_update(bot, update))
+        # AIogram v3 safe parse (IMPORTANT FIX)
+        update = types.Update.model_validate(data)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(dp.feed_update(bot, update))
+
         return "OK"
     except Exception as e:
         print("WEBHOOK ERROR:", e)
-        return "ERROR", 500
+        return "OK", 200  # Telegram ko 500 nahi dena
 
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
@@ -49,7 +55,7 @@ BATCHES = {
     "physics_5": {
         "name": "🎓 Physics 5.0",
         "price": 110,
-        "desc": "Complete Physics Course",
+        "desc": "Full Physics Course",
         "channel_id": -1002648606297
     }
 }
@@ -58,8 +64,8 @@ BATCHES = {
 @dp.message(Command("start"))
 async def start(message: types.Message):
     buttons = [
-        [InlineKeyboardButton(text=i["name"], callback_data=f"info_{k}")]
-        for k, i in BATCHES.items()
+        [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
+        for k, v in BATCHES.items()
     ]
 
     await message.answer(
@@ -86,8 +92,8 @@ async def info(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "back")
 async def back(callback: types.CallbackQuery):
     buttons = [
-        [InlineKeyboardButton(text=i["name"], callback_data=f"info_{k}")]
-        for k, i in BATCHES.items()
+        [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
+        for k, v in BATCHES.items()
     ]
 
     await callback.message.edit_text(
@@ -124,7 +130,7 @@ async def success(message: types.Message):
         member_limit=1
     )
 
-    await message.answer(f"✅ Paid!\nJoin here: {invite.invite_link}")
+    await message.answer(f"✅ Payment Done!\nJoin: {invite.invite_link}")
 
 # ---------------- STARTUP ----------------
 async def on_start():
