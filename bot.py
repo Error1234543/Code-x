@@ -7,24 +7,23 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import LabeledPrice, PreCheckoutQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.filters import Command
 
-# --- RENDER WEB SERVER ---
+# --- RENDER WEB SERVER (Bot ko 24/7 on rakhne ke liye) ---
 app = Flask('')
 @app.route('/')
 def home(): return "JET X BOT is Online!"
 def run_web(): app.run(host='0.0.0.0', port=8080)
 
-# --- CONFIGURATION (Using Environment Variables) ---
-# Render ke 'Environment' section mein 'BOT_TOKEN' naam se key banayein
+# --- CONFIGURATION ---
+# Render ke Environment Variables mein 'BOT_TOKEN' set karein
 API_TOKEN = os.getenv('BOT_TOKEN') 
-
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# --- BATCHES DATA ---
+# --- BATCHES DATABASE ---
 BATCHES = {
     "neet_2025": {
         "name": "🎓 NEET 2025 Dropper Batch",
-        "price": 110,
+        "price": 110, # Approx ₹199-200
         "desc": "✅ HD Lectures Available\n✅ Weekly Mock Tests\n✅ Handwriting & Class Notes",
         "channel_id": -1002703950742
     },
@@ -48,11 +47,12 @@ BATCHES = {
     }
 }
 
-# 1. STEP 1: Sirf Batch List dikhayega
+# 1. Start Command: Batch List (Buttons)
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     builder = []
     for b_id, info in BATCHES.items():
+        # HAR BUTTON ME callback_query_data HONA ZAROORI HAI (Fixed Error)
         builder.append([InlineKeyboardButton(text=info['name'], callback_query_data=f"info_{b_id}")])
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=builder)
@@ -62,7 +62,7 @@ async def cmd_start(message: types.Message):
         parse_mode="Markdown"
     )
 
-# 2. STEP 2: Tap karne par Details + Buy Now Button
+# 2. Detail View & Buy Now
 @dp.callback_query(F.data.startswith("info_"))
 async def show_details(callback: types.CallbackQuery):
     b_id = callback.data.split("_")
@@ -71,7 +71,7 @@ async def show_details(callback: types.CallbackQuery):
     detail_text = (
         f"🔥 *{info['name']}*\n\n"
         f"📝 *Details:*\n{info['desc']}\n\n"
-        f"💰 *Price:* ₹199 (via Stars)"
+        f"💰 *Price:* ₹199 (Pay via Stars)"
     )
     
     # Details ke niche Buy Now aur Back button
@@ -82,7 +82,7 @@ async def show_details(callback: types.CallbackQuery):
     
     await callback.message.edit_text(detail_text, reply_markup=kb, parse_mode="Markdown")
 
-# 3. Back Button Logic
+# 3. Back to List Button
 @dp.callback_query(F.data == "back_to_list")
 async def back_to_list(callback: types.CallbackQuery):
     builder = []
@@ -94,7 +94,7 @@ async def back_to_list(callback: types.CallbackQuery):
         reply_markup=InlineKeyboardMarkup(inline_keyboard=builder)
     )
 
-# 4. STEP 3: Invoice Generation
+# 4. Stars Invoice Generation
 @dp.callback_query(F.data.startswith("buy_"))
 async def send_payment(callback: types.CallbackQuery):
     b_id = callback.data.split("_")
@@ -110,17 +110,19 @@ async def send_payment(callback: types.CallbackQuery):
         prices=[LabeledPrice(label="Stars", amount=info["price"])]
     )
 
-# 5. Pre-checkout & Success (Baki logic wahi rahega)
+# 5. Pre-checkout Validation
 @dp.pre_checkout_query()
 async def pre_checkout(query: PreCheckoutQuery):
     await bot.answer_pre_checkout_query(query.id, ok=True)
 
+# 6. Payment Success & Auto-Link Generation
 @dp.message(F.successful_payment)
 async def on_success(message: types.Message):
     payload = message.successful_payment.invoice_payload
     b_id = payload.split("_")
     target_channel = BATCHES[b_id]["channel_id"]
 
+    # 1 member limit, 5 min (300s) expiry link
     invite_link = await bot.create_chat_invite_link(
         chat_id=target_channel,
         member_limit=1,
@@ -128,13 +130,15 @@ async def on_success(message: types.Message):
     )
 
     await message.answer(
-        f"✅ *Payment Successful!*\n\n🔗 [CLICK TO JOIN BATCH]({invite_link.invite_link})\n\n(Link expires in 5 min)",
+        f"✅ *Payment Successful!*\n\n🔗 [CLICK TO JOIN BATCH]({invite_link.invite_link})\n\n(Link 5 minute mein expire ho jayega)",
         parse_mode="Markdown"
     )
 
 async def main():
+    # Web server ko separate thread mein chalayein
     Thread(target=run_web).start()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
