@@ -24,11 +24,11 @@ def home():
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
 
-# ---------------- BATCHES ----------------
+# ---------------- BATCHES (100 ⭐ pricing) ----------------
 BATCHES = {
     "neet": {
         "name": "🎓 NEET 2025 Dropper / NEET Batch",
-        "price": 199,
+        "price": 100,  # ⭐
         "desc": """✅ HD Lectures Available
 ✅ Weekly Mock Test
 ✅ Handwritten Notes
@@ -37,19 +37,19 @@ BATCHES = {
     },
     "physics": {
         "name": "🎓 PHYSICS 5.0",
-        "price": 199,
+        "price": 100,
         "desc": "📚 167 Lectures Available (HD Quality)",
         "channel_id": -1002648606297
     },
     "fire": {
         "name": "🔥 Fire Physics 4.0",
-        "price": 199,
+        "price": 100,
         "desc": "✅ HD Lectures Available",
         "channel_id": -1002492489194
     },
     "pcb": {
         "name": "🎓 STD 12 PCB BOARD",
-        "price": 200,
+        "price": 100,
         "desc": """📦 FULL BATCH DOWNLOAD
 📚 417 Lectures Available""",
         "channel_id": -1003053248183
@@ -65,7 +65,10 @@ async def start(msg: types.Message):
     ]
 
     await msg.answer(
-        "👋 *Welcome to JET X BOT*\n\nSelect your batch:",
+        "👋 *Welcome to JET X BOT*\n\n"
+        "💰 Price: 100 ⭐ (≈ ₹200)\n\n"
+        "💡 Tip: Profile se ₹200 me 100 ⭐ buy karein\n\n"
+        "📚 Select your batch:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=kb),
         parse_mode="Markdown"
     )
@@ -82,7 +85,9 @@ async def info(cb: types.CallbackQuery):
     ])
 
     await cb.message.edit_text(
-        f"🔥 *{data['name']}*\n\n{data['desc']}\n\n💰 *Price:* ₹{data['price']}",
+        f"🔥 *{data['name']}*\n\n"
+        f"{data['desc']}\n\n"
+        f"💰 *Price:* {data['price']} ⭐ (≈ ₹200)",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -111,7 +116,7 @@ async def buy(cb: types.CallbackQuery):
         title=data["name"],
         description=data["desc"],
         payload=f"pay_{key}",
-        provider_token="",  # Telegram Stars ke liye empty hi rahega
+        provider_token="",  # Stars ke liye empty
         currency="XTR",
         prices=[LabeledPrice(label="Stars", amount=data["price"])]
     )
@@ -124,7 +129,6 @@ async def paid(msg: types.Message):
 
     data = BATCHES[key]
 
-    # 5 minute expire + 1 user only
     expire_time = int((datetime.now() + timedelta(minutes=5)).timestamp())
 
     link = await bot.create_chat_invite_link(
