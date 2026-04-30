@@ -14,7 +14,7 @@ API_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ---------------- FLASK (Render fix) ----------------
+# ---------------- FLASK ----------------
 app = Flask(__name__)
 
 @app.route("/")
@@ -24,51 +24,66 @@ def home():
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
 
-# ---------------- BATCHES (100 ⭐ pricing) ----------------
+# ---------------- BATCHES ----------------
 BATCHES = {
+    "power": {
+        "name": "🔥 POWER 6.0 DROPPER RE NEET BATCH",
+        "price": 250,
+        "desc": """📚 HD Lectures Available (800+ All Subjects)
+📚 Weekly Test Available
+📚 Mock Test Available
+📚 PYQ PDFs Available
+📚 Class Notes PDF Available""",
+        "channel_id": -1003714582096
+    },
     "neet": {
-        "name": "🎓 NEET 2025 Dropper / NEET Batch",
-        "price": 100,  # ⭐
-        "desc": """✅ HD Lectures Available
-✅ Weekly Mock Test
-✅ Handwritten Notes
-✅ Class Notes Included""",
+        "name": "🎓 NEET Dropper Batch by NS",
+        "price": 100,
+        "desc": """📚 HD Lectures Available
+📚 Weekly Mock Test
+📚 Handwritten Notes
+📚 Class Notes Included""",
         "channel_id": -1002703950742
-    },
-    "physics": {
-        "name": "🎓 PHYSICS 5.0",
-        "price": 100,
-        "desc": "📚 167 Lectures Available (HD Quality)",
-        "channel_id": -1002648606297
-    },
-    "fire": {
-        "name": "🔥 Fire Physics 4.0",
-        "price": 100,
-        "desc": "✅ HD Lectures Available",
-        "channel_id": -1002492489194
-    },
-    "pcb": {
-        "name": "🎓 STD 12 PCB BOARD",
-        "price": 100,
-        "desc": """📦 FULL BATCH DOWNLOAD
-📚 417 Lectures Available""",
-        "channel_id": -1003053248183
     }
 }
 
 # ---------------- START ----------------
 @dp.message(Command("start"))
 async def start(msg: types.Message):
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📚 Buy Courses", callback_data="courses")],
+        [InlineKeyboardButton(text="📩 Admin Contact", url="https://t.me/Jatxchatbot")]
+    ])
+
+    await msg.answer(
+        "💡📝 *Welcome to JET X BOT*\n\n"
+        "🔥 *Top Faculty Lectures Available* 🔥\n\n"
+        "📚 India ke best teachers ke high-quality lectures ek hi jagah par!\n"
+        "🎯 Perfect for NEET / JEE aspirants\n\n"
+        "✨ *What you’ll get:*\n"
+        "✔️ Full syllabus coverage\n"
+        "✔️ Concept clarity + short tricks\n"
+        "✔️ HD quality lectures\n"
+        "✔️ Regular updates\n"
+        "✔️ Notes + Practice support\n\n"
+        "🚀 Apni preparation next level par le jao\n"
+        "📈 Top rankers jaisa content ab easily access karo\n\n"
+        "💰 Affordable price me premium content",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+# ---------------- SHOW COURSES ----------------
+@dp.callback_query(F.data == "courses")
+async def courses(cb: types.CallbackQuery):
     kb = [
         [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
         for k, v in BATCHES.items()
     ]
+    kb.append([InlineKeyboardButton(text="📩 Admin Contact", url="https://t.me/Jatxchatbot")])
 
-    await msg.answer(
-        "👋 *Welcome to JET X BOT*\n\n"
-        "💰 Price: 100 ⭐ (≈ ₹200)\n\n"
-        "💡 Tip: Profile se ₹200 me 100 ⭐ buy karein\n\n"
-        "📚 Select your batch:",
+    await cb.message.edit_text(
+        "📚 *Select your batch:*",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=kb),
         parse_mode="Markdown"
     )
@@ -81,28 +96,15 @@ async def info(cb: types.CallbackQuery):
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Buy Now", callback_data=f"buy_{key}")],
-        [InlineKeyboardButton(text="⬅️ Back", callback_data="back")]
+        [InlineKeyboardButton(text="⬅️ Back", callback_data="courses")]
     ])
 
     await cb.message.edit_text(
         f"🔥 *{data['name']}*\n\n"
         f"{data['desc']}\n\n"
-        f"💰 *Price:* {data['price']} ⭐ (≈ ₹200)",
+        f"💰 *Price:* {data['price']} ⭐",
         reply_markup=kb,
         parse_mode="Markdown"
-    )
-
-# ---------------- BACK ----------------
-@dp.callback_query(F.data == "back")
-async def back(cb: types.CallbackQuery):
-    kb = [
-        [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
-        for k, v in BATCHES.items()
-    ]
-
-    await cb.message.edit_text(
-        "📚 Choose your batch:",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=kb)
     )
 
 # ---------------- BUY ----------------
@@ -116,7 +118,7 @@ async def buy(cb: types.CallbackQuery):
         title=data["name"],
         description=data["desc"],
         payload=f"pay_{key}",
-        provider_token="",  # Stars ke liye empty
+        provider_token="",
         currency="XTR",
         prices=[LabeledPrice(label="Stars", amount=data["price"])]
     )
