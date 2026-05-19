@@ -3,7 +3,7 @@
     {
       "id": "@GUJARATI_NEET",
       "name": "📢 Join Main Channel",
-      "link": "https://t.me/GUJARATI_NEET"
+      "join_link": "https://t.me/GUJARATI_NEET"
     }
   ],
 
@@ -15,7 +15,7 @@
 
     {
       "name": "☘️ MATERIAL WEBSITE",
-      "link": "http://gjsonic.netlify.app"
+      "link": "https://gjsonic.netlify.app"
     },
 
     {
@@ -26,28 +26,18 @@
 
   "channels": [
     {
-      "name": "📚 Material Channel",
-      "link": "https://t.me/+5Q-o60i-CSNhZTk9"
+      "id": -1001234567890,
+      "name": "🧪 Yakeen NEET 2025"
     },
 
     {
-      "name": "🧪 Yakeen NEET 2025",
-      "link": "https://t.me/+bZUNJSlThhZlODU1"
+      "id": -1009876543210,
+      "name": "📚 Material Channel"
     },
 
     {
-      "name": "📘 Arjuna NEET 2025 & PYQ",
-      "link": "https://t.me/+6gg3WAk3tdhjNWY1"
-    },
-
-    {
-      "name": "🎓 Allen Digital",
-      "link": "https://t.me/+wsU5bnu3ReQzOGNl"
-    },
-
-    {
-      "name": "📂 Allen Old",
-      "link": "https://t.me/+NmI4SnRQ2nBmYzI9"
+      "id": -1005555555555,
+      "name": "📘 Arjuna NEET 2025 & PYQ"
     }
   ]
 }
