@@ -1,33 +1,53 @@
 {
   "force_channels": [
     {
-      "id": "@yourchannel",
+      "id": "@GUJARATI_NEET",
       "name": "📢 Join Main Channel",
-      "link": "https://t.me/yourchannel"
+      "link": "https://t.me/GUJARATI_NEET"
     }
   ],
 
   "websites": [
     {
-      "name": "📝 Test Website",
-      "link": "https://example1.netlify.app"
+      "name": "☘️ TEST WEBSITE",
+      "link": "https://testzone-pro.netlify.app/"
     },
 
     {
-      "name": "📚 Material Website",
-      "link": "https://example2.netlify.app"
+      "name": "☘️ MATERIAL WEBSITE",
+      "link": "http://gjsonic.netlify.app"
+    },
+
+    {
+      "name": "☘️ PW TEST WEBSITE",
+      "link": "https://pwtestweb.netlify.app"
     }
   ],
 
   "channels": [
     {
-      "name": "📢 Updates Channel",
-      "link": "https://t.me/yourchannel"
+      "name": "📚 Material Channel",
+      "link": "https://t.me/+5Q-o60i-CSNhZTk9"
     },
 
     {
-      "name": "📢 Backup Channel",
-      "link": "https://t.me/yourchannel2"
+      "name": "🧪 Yakeen NEET 2025",
+      "link": "https://t.me/+bZUNJSlThhZlODU1"
+    },
+
+    {
+      "name": "📘 Arjuna NEET 2025 & PYQ",
+      "link": "https://t.me/+6gg3WAk3tdhjNWY1"
+    },
+
+    {
+      "name": "🎓 Allen Digital",
+      "link": "https://t.me/+wsU5bnu3ReQzOGNl"
+    },
+
+    {
+      "name": "📂 Allen Old",
+      "link": "https://t.me/+NmI4SnRQ2nBmYzI9"
     }
   ]
 }
