@@ -1,11 +1,12 @@
-
 # bot.py
-# Koyeb Deploy Ready Telegram Bot
+# Telegram Website + Temporary Channel Access Bot
+# Koyeb Ready
 
 import os
 import json
-from flask import Flask
+import time
 from threading import Thread
+from flask import Flask
 
 from pyrogram import Client, filters
 from pyrogram.types import (
@@ -15,17 +16,17 @@ from pyrogram.types import (
 )
 
 # ==========================================
-# KEEP ALIVE SERVER FOR KOYEB HEALTH CHECK
+# FLASK HEALTH CHECK
 # ==========================================
 
-app = Flask('')
+app = Flask(__name__)
 
-@app.route('/')
+@app.route("/")
 def home():
-    return "Bot Is Running Successfully!"
+    return "Bot Running Successfully"
 
 def run_web():
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host="0.0.0.0", port=8000)
 
 Thread(target=run_web).start()
 
@@ -38,7 +39,7 @@ API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = Client(
-    "WebsiteHubBot",
+    "MiniAppBot",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN
@@ -49,17 +50,17 @@ bot = Client(
 # ==========================================
 
 with open("data.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+    DATA = json.load(f)
 
-FORCE_CHANNELS = data["force_channels"]
-WEBSITES = data["websites"]
-CHANNELS = data["channels"]
+FORCE_CHANNELS = DATA["force_channels"]
+WEBSITES = DATA["websites"]
+CHANNELS = DATA["channels"]
 
 # ==========================================
-# CHECK FORCE JOIN
+# FORCE JOIN CHECK
 # ==========================================
 
-async def is_joined(user_id):
+async def check_join(user_id):
 
     try:
 
@@ -83,15 +84,13 @@ async def is_joined(user_id):
 # ==========================================
 
 @bot.on_message(filters.command("start"))
-async def start_command(client, message):
+async def start(client, message):
 
-    user_id = message.from_user.id
+    joined = await check_join(message.from_user.id)
 
-    joined = await is_joined(user_id)
-
-    # ==========================
+    # ======================================
     # FORCE JOIN PAGE
-    # ==========================
+    # ======================================
 
     if not joined:
 
@@ -102,7 +101,7 @@ async def start_command(client, message):
             buttons.append([
                 InlineKeyboardButton(
                     ch["name"],
-                    url=ch["link"]
+                    url=ch["join_link"]
                 )
             ])
 
@@ -114,16 +113,15 @@ async def start_command(client, message):
         ])
 
         await message.reply_text(
-            text="""
+            """
 ✨ Welcome To Our Educational Hub ✨
 
 📚 Here You Will Get:
 
 • Test Websites
 • Study Materials
-• Practice Platforms
-• Educational Updates
-• All Official Channels
+• Practice Systems
+• Official Channels
 
 ⚡ First Join All Channels Then Click Verify.
             """,
@@ -132,9 +130,9 @@ async def start_command(client, message):
 
         return
 
-    # ==========================
-    # MAIN HOME PAGE
-    # ==========================
+    # ======================================
+    # MAIN MENU
+    # ======================================
 
     keyboard = InlineKeyboardMarkup([
         [
@@ -145,21 +143,20 @@ async def start_command(client, message):
         ],
         [
             InlineKeyboardButton(
-                "📢 OUR ALL CHANNELS",
+                "📢 OUR CHANNELS",
                 callback_data="channels"
             )
         ]
     ])
 
     await message.reply_text(
-        text="""
-🚀 Welcome To Our Main System
+        """
+🚀 Welcome To Main System
 
 📚 Access:
 • Test Websites
-• Materials
-• Practice Systems
-• All Channels
+• Study Materials
+• Official Channels
 
 ⚡ Everything Organized In One Place.
         """,
@@ -167,15 +164,13 @@ async def start_command(client, message):
     )
 
 # ==========================================
-# VERIFY BUTTON
+# VERIFY JOIN
 # ==========================================
 
-@bot.on_callback_query(filters.regex("verify_join"))
+@bot.on_callback_query(filters.regex("^verify_join$"))
 async def verify_join(client, callback_query):
 
-    user_id = callback_query.from_user.id
-
-    joined = await is_joined(user_id)
+    joined = await check_join(callback_query.from_user.id)
 
     if not joined:
 
@@ -195,14 +190,14 @@ async def verify_join(client, callback_query):
         ],
         [
             InlineKeyboardButton(
-                "📢 OUR ALL CHANNELS",
+                "📢 OUR CHANNELS",
                 callback_data="channels"
             )
         ]
     ])
 
     await callback_query.message.edit_text(
-        text="""
+        """
 ✅ Verification Successful
 
 🚀 Welcome To Main System
@@ -214,7 +209,7 @@ async def verify_join(client, callback_query):
 # WEBSITES
 # ==========================================
 
-@bot.on_callback_query(filters.regex("websites"))
+@bot.on_callback_query(filters.regex("^websites$"))
 async def websites(client, callback_query):
 
     buttons = []
@@ -223,7 +218,7 @@ async def websites(client, callback_query):
 
         buttons.append([
             InlineKeyboardButton(
-                site["name"],
+                text=site["name"],
                 web_app=WebAppInfo(site["link"])
             )
         ])
@@ -236,11 +231,7 @@ async def websites(client, callback_query):
     ])
 
     await callback_query.message.edit_text(
-        text="""
-🌐 OUR WEBSITES
-
-⚡ Click Any Website Below.
-        """,
+        "🌐 OUR WEBSITES\n\nSelect Any Website 👇",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
@@ -248,7 +239,7 @@ async def websites(client, callback_query):
 # CHANNELS
 # ==========================================
 
-@bot.on_callback_query(filters.regex("channels"))
+@bot.on_callback_query(filters.regex("^channels$"))
 async def channels(client, callback_query):
 
     buttons = []
@@ -258,7 +249,7 @@ async def channels(client, callback_query):
         buttons.append([
             InlineKeyboardButton(
                 ch["name"],
-                url=ch["link"]
+                callback_data=f"channel_{ch['id']}"
             )
         ])
 
@@ -270,19 +261,61 @@ async def channels(client, callback_query):
     ])
 
     await callback_query.message.edit_text(
-        text="""
-📢 OUR ALL CHANNELS
-
-⚡ Join All Channels Below.
-        """,
+        "📢 OUR CHANNELS\n\nSelect Any Channel 👇",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
+
+# ==========================================
+# GENERATE TEMP CHANNEL LINK
+# ==========================================
+
+@bot.on_callback_query(filters.regex("^channel_"))
+async def channel_access(client, callback_query):
+
+    channel_id = int(
+        callback_query.data.replace("channel_", "")
+    )
+
+    selected = None
+
+    for ch in CHANNELS:
+
+        if ch["id"] == channel_id:
+            selected = ch
+            break
+
+    if not selected:
+        return
+
+    try:
+
+        invite = await bot.create_chat_invite_link(
+            chat_id=selected["id"],
+            expire_date=int(time.time()) + 60,
+            member_limit=1
+        )
+
+        await callback_query.message.reply_text(
+            f"""
+🔐 Temporary Access Link Generated
+
+⚡ This link expires automatically in 1 minute.
+
+{invite.invite_link}
+            """
+        )
+
+    except Exception as e:
+
+        await callback_query.message.reply_text(
+            f"❌ Error:\n{e}"
+        )
 
 # ==========================================
 # BACK BUTTON
 # ==========================================
 
-@bot.on_callback_query(filters.regex("back_home"))
+@bot.on_callback_query(filters.regex("^back_home$"))
 async def back_home(client, callback_query):
 
     keyboard = InlineKeyboardMarkup([
@@ -294,23 +327,19 @@ async def back_home(client, callback_query):
         ],
         [
             InlineKeyboardButton(
-                "📢 OUR ALL CHANNELS",
+                "📢 OUR CHANNELS",
                 callback_data="channels"
             )
         ]
     ])
 
     await callback_query.message.edit_text(
-        text="""
-🏠 Main Menu
-
-⚡ Select Any Option Below.
-        """,
+        "🏠 Main Menu",
         reply_markup=keyboard
     )
 
 # ==========================================
-# START BOT
+# RUN BOT
 # ==========================================
 
 print("Bot Running Successfully...")
