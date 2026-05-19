@@ -1,10 +1,11 @@
 # bot.py
-# Telegram Website + Temporary Channel Access Bot
-# Koyeb Ready
+# Updated Working Version
+# Telegram Mini App + Temporary Invite Link Bot
 
 import os
 import json
-import time
+
+from datetime import datetime, timedelta
 from threading import Thread
 from flask import Flask
 
@@ -16,7 +17,7 @@ from pyrogram.types import (
 )
 
 # ==========================================
-# FLASK HEALTH CHECK
+# FLASK SERVER FOR KOYEB
 # ==========================================
 
 app = Flask(__name__)
@@ -26,7 +27,10 @@ def home():
     return "Bot Running Successfully"
 
 def run_web():
-    app.run(host="0.0.0.0", port=8000)
+    app.run(
+        host="0.0.0.0",
+        port=8000
+    )
 
 Thread(target=run_web).start()
 
@@ -57,7 +61,7 @@ WEBSITES = DATA["websites"]
 CHANNELS = DATA["channels"]
 
 # ==========================================
-# FORCE JOIN CHECK
+# CHECK FORCE JOIN
 # ==========================================
 
 async def check_join(user_id):
@@ -86,7 +90,9 @@ async def check_join(user_id):
 @bot.on_message(filters.command("start"))
 async def start(client, message):
 
-    joined = await check_join(message.from_user.id)
+    joined = await check_join(
+        message.from_user.id
+    )
 
     # ======================================
     # FORCE JOIN PAGE
@@ -100,14 +106,14 @@ async def start(client, message):
 
             buttons.append([
                 InlineKeyboardButton(
-                    ch["name"],
+                    text=ch["name"],
                     url=ch["join_link"]
                 )
             ])
 
         buttons.append([
             InlineKeyboardButton(
-                "✅ VERIFY JOIN",
+                text="✅ VERIFY JOIN",
                 callback_data="verify_join"
             )
         ])
@@ -137,13 +143,13 @@ async def start(client, message):
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "🌐 OUR WEBSITES",
+                text="🌐 OUR WEBSITES",
                 callback_data="websites"
             )
         ],
         [
             InlineKeyboardButton(
-                "📢 OUR CHANNELS",
+                text="📢 OUR CHANNELS",
                 callback_data="channels"
             )
         ]
@@ -170,7 +176,9 @@ async def start(client, message):
 @bot.on_callback_query(filters.regex("^verify_join$"))
 async def verify_join(client, callback_query):
 
-    joined = await check_join(callback_query.from_user.id)
+    joined = await check_join(
+        callback_query.from_user.id
+    )
 
     if not joined:
 
@@ -184,13 +192,13 @@ async def verify_join(client, callback_query):
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "🌐 OUR WEBSITES",
+                text="🌐 OUR WEBSITES",
                 callback_data="websites"
             )
         ],
         [
             InlineKeyboardButton(
-                "📢 OUR CHANNELS",
+                text="📢 OUR CHANNELS",
                 callback_data="channels"
             )
         ]
@@ -206,7 +214,7 @@ async def verify_join(client, callback_query):
     )
 
 # ==========================================
-# WEBSITES
+# WEBSITES MENU
 # ==========================================
 
 @bot.on_callback_query(filters.regex("^websites$"))
@@ -219,13 +227,15 @@ async def websites(client, callback_query):
         buttons.append([
             InlineKeyboardButton(
                 text=site["name"],
-                web_app=WebAppInfo(site["link"])
+                web_app=WebAppInfo(
+                    url=site["link"]
+                )
             )
         ])
 
     buttons.append([
         InlineKeyboardButton(
-            "🔙 BACK",
+            text="🔙 BACK",
             callback_data="back_home"
         )
     ])
@@ -236,7 +246,7 @@ async def websites(client, callback_query):
     )
 
 # ==========================================
-# CHANNELS
+# CHANNELS MENU
 # ==========================================
 
 @bot.on_callback_query(filters.regex("^channels$"))
@@ -248,14 +258,14 @@ async def channels(client, callback_query):
 
         buttons.append([
             InlineKeyboardButton(
-                ch["name"],
+                text=ch["name"],
                 callback_data=f"channel_{ch['id']}"
             )
         ])
 
     buttons.append([
         InlineKeyboardButton(
-            "🔙 BACK",
+            text="🔙 BACK",
             callback_data="back_home"
         )
     ])
@@ -266,14 +276,17 @@ async def channels(client, callback_query):
     )
 
 # ==========================================
-# GENERATE TEMP CHANNEL LINK
+# GENERATE TEMP INVITE LINK
 # ==========================================
 
 @bot.on_callback_query(filters.regex("^channel_"))
 async def channel_access(client, callback_query):
 
     channel_id = int(
-        callback_query.data.replace("channel_", "")
+        callback_query.data.replace(
+            "channel_",
+            ""
+        )
     )
 
     selected = None
@@ -291,7 +304,7 @@ async def channel_access(client, callback_query):
 
         invite = await bot.create_chat_invite_link(
             chat_id=selected["id"],
-            expire_date=int(time.time()) + 60,
+            expire_date=datetime.now() + timedelta(minutes=1),
             member_limit=1
         )
 
@@ -321,13 +334,13 @@ async def back_home(client, callback_query):
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "🌐 OUR WEBSITES",
+                text="🌐 OUR WEBSITES",
                 callback_data="websites"
             )
         ],
         [
             InlineKeyboardButton(
-                "📢 OUR CHANNELS",
+                text="📢 OUR CHANNELS",
                 callback_data="channels"
             )
         ]
