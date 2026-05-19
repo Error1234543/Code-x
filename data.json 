@@ -1,0 +1,33 @@
+{
+  "force_channels": [
+    {
+      "id": "@yourchannel",
+      "name": "📢 Join Main Channel",
+      "link": "https://t.me/yourchannel"
+    }
+  ],
+
+  "websites": [
+    {
+      "name": "📝 Test Website",
+      "link": "https://example1.netlify.app"
+    },
+
+    {
+      "name": "📚 Material Website",
+      "link": "https://example2.netlify.app"
+    }
+  ],
+
+  "channels": [
+    {
+      "name": "📢 Updates Channel",
+      "link": "https://t.me/yourchannel"
+    },
+
+    {
+      "name": "📢 Backup Channel",
+      "link": "https://t.me/yourchannel2"
+    }
+  ]
+}
