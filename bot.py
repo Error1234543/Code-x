@@ -1,157 +1,317 @@
-import asyncio
+
+# bot.py
+# Koyeb Deploy Ready Telegram Bot
+
 import os
-import logging
+import json
 from flask import Flask
 from threading import Thread
-from datetime import datetime, timedelta
 
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
-from aiogram.filters import Command
+from pyrogram import Client, filters
+from pyrogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    WebAppInfo
+)
 
-API_TOKEN = os.getenv("BOT_TOKEN")
+# ==========================================
+# KEEP ALIVE SERVER FOR KOYEB HEALTH CHECK
+# ==========================================
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
+app = Flask('')
 
-# ---------------- FLASK ----------------
-app = Flask(__name__)
-
-@app.route("/")
+@app.route('/')
 def home():
-    return "JET X BOT is LIVE 🚀"
+    return "Bot Is Running Successfully!"
 
-def run_flask():
-    app.run(host="0.0.0.0", port=8080)
+def run_web():
+    app.run(host='0.0.0.0', port=8000)
 
-# ---------------- BATCHES ----------------
-BATCHES = {
-    "power": {
-        "name": "🔥 POWER 6.0 DROPPER RE NEET BATCH",
-        "price": 250,
-        "desc": """📚 HD Lectures Available (800+ All Subjects)
-📚 Weekly Test Available
-📚 Mock Test Available
-📚 PYQ PDFs Available
-📚 Class Notes PDF Available""",
-        "channel_id": -1003714582096
-    },
-    "neet": {
-        "name": "🎓 NEET Dropper Batch by NS",
-        "price": 100,
-        "desc": """📚 HD Lectures Available
-📚 Weekly Mock Test
-📚 Handwritten Notes
-📚 Class Notes Included""",
-        "channel_id": -1002703950742
-    }
-}
+Thread(target=run_web).start()
 
-# ---------------- START ----------------
-@dp.message(Command("start"))
-async def start(msg: types.Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📚 Buy Courses", callback_data="courses")],
-        [InlineKeyboardButton(text="📩 Admin Contact", url="https://t.me/Jatxchatbot")]
+# ==========================================
+# BOT CONFIG
+# ==========================================
+
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+bot = Client(
+    "WebsiteHubBot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
+
+# ==========================================
+# LOAD JSON DATA
+# ==========================================
+
+with open("data.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+FORCE_CHANNELS = data["force_channels"]
+WEBSITES = data["websites"]
+CHANNELS = data["channels"]
+
+# ==========================================
+# CHECK FORCE JOIN
+# ==========================================
+
+async def is_joined(user_id):
+
+    try:
+
+        for ch in FORCE_CHANNELS:
+
+            member = await bot.get_chat_member(
+                ch["id"],
+                user_id
+            )
+
+            if member.status in ["left", "kicked"]:
+                return False
+
+        return True
+
+    except:
+        return False
+
+# ==========================================
+# START COMMAND
+# ==========================================
+
+@bot.on_message(filters.command("start"))
+async def start_command(client, message):
+
+    user_id = message.from_user.id
+
+    joined = await is_joined(user_id)
+
+    # ==========================
+    # FORCE JOIN PAGE
+    # ==========================
+
+    if not joined:
+
+        buttons = []
+
+        for ch in FORCE_CHANNELS:
+
+            buttons.append([
+                InlineKeyboardButton(
+                    ch["name"],
+                    url=ch["link"]
+                )
+            ])
+
+        buttons.append([
+            InlineKeyboardButton(
+                "✅ VERIFY JOIN",
+                callback_data="verify_join"
+            )
+        ])
+
+        await message.reply_text(
+            text="""
+✨ Welcome To Our Educational Hub ✨
+
+📚 Here You Will Get:
+
+• Test Websites
+• Study Materials
+• Practice Platforms
+• Educational Updates
+• All Official Channels
+
+⚡ First Join All Channels Then Click Verify.
+            """,
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+
+        return
+
+    # ==========================
+    # MAIN HOME PAGE
+    # ==========================
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🌐 OUR WEBSITES",
+                callback_data="websites"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📢 OUR ALL CHANNELS",
+                callback_data="channels"
+            )
+        ]
     ])
 
-    await msg.answer(
-        "💡📝 *Welcome to JET X BOT*\n\n"
-        "🔥 *Top Faculty Lectures Available* 🔥\n\n"
-        "📚 India ke best teachers ke high-quality lectures ek hi jagah par!\n"
-        "🎯 Perfect for NEET / JEE aspirants\n\n"
-        "✨ *What you’ll get:*\n"
-        "✔️ Full syllabus coverage\n"
-        "✔️ Concept clarity + short tricks\n"
-        "✔️ HD quality lectures\n"
-        "✔️ Regular updates\n"
-        "✔️ Notes + Practice support\n\n"
-        "🚀 Apni preparation next level par le jao\n"
-        "📈 Top rankers jaisa content ab easily access karo\n\n"
-        "💰 Affordable price me premium content",
-        reply_markup=kb,
-        parse_mode="Markdown"
+    await message.reply_text(
+        text="""
+🚀 Welcome To Our Main System
+
+📚 Access:
+• Test Websites
+• Materials
+• Practice Systems
+• All Channels
+
+⚡ Everything Organized In One Place.
+        """,
+        reply_markup=keyboard
     )
 
-# ---------------- SHOW COURSES ----------------
-@dp.callback_query(F.data == "courses")
-async def courses(cb: types.CallbackQuery):
-    kb = [
-        [InlineKeyboardButton(text=v["name"], callback_data=f"info_{k}")]
-        for k, v in BATCHES.items()
-    ]
-    kb.append([InlineKeyboardButton(text="📩 Admin Contact", url="https://t.me/Jatxchatbot")])
+# ==========================================
+# VERIFY BUTTON
+# ==========================================
 
-    await cb.message.edit_text(
-        "📚 *Select your batch:*",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=kb),
-        parse_mode="Markdown"
-    )
+@bot.on_callback_query(filters.regex("verify_join"))
+async def verify_join(client, callback_query):
 
-# ---------------- INFO ----------------
-@dp.callback_query(F.data.startswith("info_"))
-async def info(cb: types.CallbackQuery):
-    key = cb.data.split("_")[1]
-    data = BATCHES[key]
+    user_id = callback_query.from_user.id
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💳 Buy Now", callback_data=f"buy_{key}")],
-        [InlineKeyboardButton(text="⬅️ Back", callback_data="courses")]
+    joined = await is_joined(user_id)
+
+    if not joined:
+
+        await callback_query.answer(
+            "❌ First Join All Channels",
+            show_alert=True
+        )
+
+        return
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🌐 OUR WEBSITES",
+                callback_data="websites"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📢 OUR ALL CHANNELS",
+                callback_data="channels"
+            )
+        ]
     ])
 
-    await cb.message.edit_text(
-        f"🔥 *{data['name']}*\n\n"
-        f"{data['desc']}\n\n"
-        f"💰 *Price:* {data['price']} ⭐",
-        reply_markup=kb,
-        parse_mode="Markdown"
+    await callback_query.message.edit_text(
+        text="""
+✅ Verification Successful
+
+🚀 Welcome To Main System
+        """,
+        reply_markup=keyboard
     )
 
-# ---------------- BUY ----------------
-@dp.callback_query(F.data.startswith("buy_"))
-async def buy(cb: types.CallbackQuery):
-    key = cb.data.split("_")[1]
-    data = BATCHES[key]
+# ==========================================
+# WEBSITES
+# ==========================================
 
-    await bot.send_invoice(
-        chat_id=cb.from_user.id,
-        title=data["name"],
-        description=data["desc"],
-        payload=f"pay_{key}",
-        provider_token="",
-        currency="XTR",
-        prices=[LabeledPrice(label="Stars", amount=data["price"])]
+@bot.on_callback_query(filters.regex("websites"))
+async def websites(client, callback_query):
+
+    buttons = []
+
+    for site in WEBSITES:
+
+        buttons.append([
+            InlineKeyboardButton(
+                site["name"],
+                web_app=WebAppInfo(site["link"])
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            "🔙 BACK",
+            callback_data="back_home"
+        )
+    ])
+
+    await callback_query.message.edit_text(
+        text="""
+🌐 OUR WEBSITES
+
+⚡ Click Any Website Below.
+        """,
+        reply_markup=InlineKeyboardMarkup(buttons)
     )
 
-# ---------------- PAYMENT SUCCESS ----------------
-@dp.message(F.successful_payment)
-async def paid(msg: types.Message):
-    payload = msg.successful_payment.invoice_payload
-    key = payload.split("_")[1]
+# ==========================================
+# CHANNELS
+# ==========================================
 
-    data = BATCHES[key]
+@bot.on_callback_query(filters.regex("channels"))
+async def channels(client, callback_query):
 
-    expire_time = int((datetime.now() + timedelta(minutes=5)).timestamp())
+    buttons = []
 
-    link = await bot.create_chat_invite_link(
-        chat_id=data["channel_id"],
-        member_limit=1,
-        expire_date=expire_time
+    for ch in CHANNELS:
+
+        buttons.append([
+            InlineKeyboardButton(
+                ch["name"],
+                url=ch["link"]
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(
+            "🔙 BACK",
+            callback_data="back_home"
+        )
+    ])
+
+    await callback_query.message.edit_text(
+        text="""
+📢 OUR ALL CHANNELS
+
+⚡ Join All Channels Below.
+        """,
+        reply_markup=InlineKeyboardMarkup(buttons)
     )
 
-    await msg.answer(
-        f"✅ *Payment Successful!*\n\n"
-        f"🔗 Join your batch:\n{link.invite_link}\n\n"
-        f"⚠️ Link 5 min me expire ho jayega",
-        parse_mode="Markdown"
+# ==========================================
+# BACK BUTTON
+# ==========================================
+
+@bot.on_callback_query(filters.regex("back_home"))
+async def back_home(client, callback_query):
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🌐 OUR WEBSITES",
+                callback_data="websites"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📢 OUR ALL CHANNELS",
+                callback_data="channels"
+            )
+        ]
+    ])
+
+    await callback_query.message.edit_text(
+        text="""
+🏠 Main Menu
+
+⚡ Select Any Option Below.
+        """,
+        reply_markup=keyboard
     )
 
-# ---------------- MAIN ----------------
-async def main():
-    Thread(target=run_flask).start()
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+# ==========================================
+# START BOT
+# ==========================================
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
+print("Bot Running Successfully...")
+bot.run()
