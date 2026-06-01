@@ -1,0 +1,24 @@
+services:
+  - type: worker          # Background worker (no HTTP port needed for polling bot)
+    name: neet-access-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false       # Set manually in Render dashboard
+      - key: VPLINK_API_KEY
+        sync: false
+      - key: CHANNEL_1_ID
+        sync: false
+      - key: CHANNEL_2_ID
+        sync: false
+      - key: CHANNEL_1_NAME
+        value: "NEET Batch 1"
+      - key: CHANNEL_2_NAME
+        value: "NEET Batch 2"
+      - key: ACCESS_HOURS
+        value: "19"
+      - key: DB_PATH
+        value: "/opt/render/project/src/bot_data.db"
